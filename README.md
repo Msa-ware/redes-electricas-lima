@@ -2,6 +2,8 @@
 
 Aplicativo del Trabajo Final de **Complejidad Algorítmica (1ACC0184) – UPC 2026-20**, Caso 8: *Diseño de redes eléctricas*.
 
+**App en línea:** <https://redes-electricas-lima.streamlit.app/>
+
 Diseña la red de media tensión que une las **6 187 subestaciones** de Lima (OpenStreetMap) para que:
 
 1. **minimice el costo del cableado**;
