@@ -3,10 +3,14 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 
-COLOR_TIPO = {"distribucion": "#2b6cb0", "transmision": "#c53030", "generacion": "#2f855a"}
-COLOR_ZONA = {"comercial": "#d69e2e", "residencial_alto": "#805ad5", "residencial_medio": "#3182ce",
-              "popular": "#38a169", "industrial": "#e53e3e"}
-COLOR_AT = {"500": "#6b46c1", "220": "#dd6b20", "60": "#b7791f"}
+PALETA = {"teal": "#0E7C7B", "azul": "#2F6690", "celeste": "#3A86C8", "verde": "#2A9D8F",
+          "amarillo": "#E9C46A", "naranja": "#F4A261", "coral": "#E4572E", "morado": "#8E6CC9",
+          "oscuro": "#13303F"}
+COLOR_TIPO = {"distribucion": PALETA["celeste"], "transmision": PALETA["coral"], "generacion": PALETA["verde"]}
+COLOR_ZONA = {"comercial": PALETA["amarillo"], "residencial_alto": PALETA["morado"],
+              "residencial_medio": PALETA["celeste"], "popular": PALETA["verde"], "industrial": PALETA["coral"]}
+COLOR_AT = {"500": "#6D4C9F", "220": PALETA["naranja"], "60": "#C9A227"}
+COLOR_CFG = {"A": PALETA["coral"], "B": PALETA["celeste"], "C": PALETA["verde"]}
 CENTRO_LIMA = {"lat": -12.06, "lon": -77.0}
 
 
@@ -57,7 +61,7 @@ def mapa_dataset(nodos, at, colorear="tipo", demanda=None):
         d = nodos[~nodos.es_fuente]
         fig.add_trace(go.Scattermap(
             lat=d.lat, lon=d.lon, mode="markers", name="SED (demanda)",
-            marker=dict(size=5, color=demanda[d.id] * 1000, colorscale="YlOrRd", cmin=50, cmax=450,
+            marker=dict(size=5, color=demanda[d.id] * 1000, colorscale=[[0, "#FFF3C4"], [0.5, PALETA["naranja"]], [1, PALETA["coral"]]], cmin=50, cmax=450,
                         colorbar=dict(title="kW", x=1.0, len=0.6)),
             text=[f"{r.nombre or r.osm_id}<br>{r.distrito} ({r.zona})<br>{demanda[r.id]*1000:.0f} kW"
                   for r in d.itertuples()], hoverinfo="text"))
@@ -79,12 +83,12 @@ def mapa_dataset(nodos, at, colorear="tipo", demanda=None):
     if colorear == "zona":
         f = nodos[nodos.es_fuente]
         fig.add_trace(go.Scattermap(lat=f.lat, lon=f.lon, mode="markers", name="Fuentes (SET/centrales)",
-                                    marker=dict(size=12, color="#1a202c"), text=f.nombre, hoverinfo="text"))
+                                    marker=dict(size=12, color=PALETA["oscuro"]), text=f.nombre, hoverinfo="text"))
     return fig
 
 
-BINS_CARGA = [(0, 50, "#38a169", "Carga < 50 %"), (50, 80, "#d69e2e", "Carga 50–80 %"),
-              (80, 100.0001, "#dd6b20", "Carga 80–100 %"), (100.0001, np.inf, "#e53e3e", "Sobrecarga > 100 %")]
+BINS_CARGA = [(0, 50, PALETA["verde"], "Carga < 50 %"), (50, 80, PALETA["amarillo"], "Carga 50–80 %"),
+              (80, 100.0001, PALETA["naranja"], "Carga 80–100 %"), (100.0001, np.inf, PALETA["coral"], "Sobrecarga > 100 %")]
 
 
 def mapa_red(ctx, Lr, nodos_res, dv_max, resaltar=None, centro=None, zoom=9.6, alto=620):
@@ -98,24 +102,24 @@ def mapa_red(ctx, Lr, nodos_res, dv_max, resaltar=None, centro=None, zoom=9.6, a
             fig.add_trace(traza_lineas(g.u, g.v, lat, lon, color, f"{nombre} ({len(g)})", 2.2))
     resp = Lr[(Lr.tipo == "respaldo") & (Lr.estado == "abierto")]
     if len(resp):
-        fig.add_trace(traza_lineas(resp.u, resp.v, lat, lon, "#9f7aea", f"Respaldo abierto ({len(resp)})", 1.2, 0.7))
+        fig.add_trace(traza_lineas(resp.u, resp.v, lat, lon, PALETA["morado"], f"Respaldo abierto ({len(resp)})", 1.2, 0.7))
     dv = nodos_res["dv_pct"]
     d = np.flatnonzero(~ctx["es_fuente"])
     ok = d[~np.isnan(dv[d])]
     fig.add_trace(go.Scattermap(
         lat=lat[ok], lon=lon[ok], mode="markers", name="SED (ΔV %)",
-        marker=dict(size=5, color=np.clip(dv[ok], 0, 2 * dv_max), colorscale=[[0, "#2b6cb0"], [0.45, "#63b3ed"],
-                    [0.5, "#f6e05e"], [0.75, "#ed8936"], [1, "#9b2c2c"]], cmin=0, cmax=2 * dv_max,
+        marker=dict(size=5, color=np.clip(dv[ok], 0, 2 * dv_max), colorscale=[[0, PALETA["azul"]], [0.45, "#8CC7E8"],
+                    [0.5, PALETA["amarillo"]], [0.75, PALETA["naranja"]], [1, "#B23A1F"]], cmin=0, cmax=2 * dv_max,
                     colorbar=dict(title="ΔV %", x=1.0, len=0.6)),
         text=[f"Nodo {i} · {ctx['nodos'].distrito.iat[i]}<br>Demanda {ctx['demanda'][i]*1000:.0f} kW<br>ΔV {dv[i]:.2f} %"
               for i in ok], hoverinfo="text"))
     sin = d[np.isnan(dv[d])]
     if len(sin):
         fig.add_trace(go.Scattermap(lat=lat[sin], lon=lon[sin], mode="markers", name=f"Sin suministro ({len(sin)})",
-                                    marker=dict(size=9, color="#e53e3e"), hoverinfo="skip"))
+                                    marker=dict(size=9, color=PALETA["coral"]), hoverinfo="skip"))
     f = np.flatnonzero(ctx["es_fuente"])
     fig.add_trace(go.Scattermap(lat=lat[f], lon=lon[f], mode="markers", name="SET / central",
-                                marker=dict(size=13, color="#1a202c"),
+                                marker=dict(size=13, color=PALETA["oscuro"]),
                                 text=[ctx["nodos"].nombre.iat[i] or f"Fuente {i}" for i in f], hoverinfo="text"))
     if resaltar:
         for item in resaltar:
@@ -126,9 +130,9 @@ def mapa_red(ctx, Lr, nodos_res, dv_max, resaltar=None, centro=None, zoom=9.6, a
 def curva_carga(cs, hora):
     fig = go.Figure()
     for col, color in zip(["Comercial", "Residencial alto", "Residencial medio", "Residencial popular", "Industrial"],
-                          ["#d69e2e", "#805ad5", "#3182ce", "#38a169", "#e53e3e"]):
+                          [COLOR_ZONA[z] for z in ("comercial", "residencial_alto", "residencial_medio", "popular", "industrial")]):
         fig.add_trace(go.Scatter(x=cs.hora, y=cs[col], stackgroup="z", name=col, line=dict(width=0.5, color=color)))
-    fig.add_vline(x=hora, line_dash="dash", line_color="#1a202c",
+    fig.add_vline(x=hora, line_dash="dash", line_color=PALETA["oscuro"],
                   annotation_text=f"Hora analizada {hora}:00", annotation_position="top left")
     fig.update_layout(height=330, margin=dict(l=10, r=10, t=30, b=10), xaxis_title="Hora del día",
                       yaxis_title="Demanda (MW)", legend=dict(orientation="h", y=-0.25))
